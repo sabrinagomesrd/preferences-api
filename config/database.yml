@@ -1,0 +1,17 @@
+# Postgres local (Docker nesta PoC). Não é Cloud SQL.
+default: &default
+  adapter: postgresql
+  encoding: unicode
+  pool: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
+  host: <%= ENV.fetch("POSTGRES_HOST", "127.0.0.1") %>
+  port: <%= ENV.fetch("POSTGRES_PORT", 5433) %>
+  username: <%= ENV.fetch("POSTGRES_USER", "postgres") %>
+  password: <%= ENV.fetch("POSTGRES_PASSWORD", "postgres") %>
+
+development:
+  <<: *default
+  database: preferences_api_development
+
+test:
+  <<: *default
+  database: preferences_api_test

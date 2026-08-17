@@ -1,0 +1,16 @@
+# Postgres local para a PoC — porta 5433 para não colidir com outros Postgres da máquina.
+# Cloud SQL (Postgres gerenciado no GCP) é o equivalente do rails-templates; não é o que este compose sobe.
+services:
+  postgres:
+    image: postgres:16
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: preferences_api_development
+    volumes:
+      - preferences_postgres_data:/var/lib/postgresql/data
+
+volumes:
+  preferences_postgres_data:
