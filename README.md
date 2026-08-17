@@ -4,19 +4,19 @@ POC irmã da [`preferences-api-mongo`](https://github.com/sabrinagomesrd/prefere
 
 > **Não é** serviço de produção. **Não fecha** ADR de persistência.
 
-O primeiro motor local foi SQLite (default do `rails new`). Esta pasta agora sobe **Postgres no Docker**, alinhada ao Esboço A (relacional + JSON). Cloud SQL seria o Postgres *gerenciado no GCP* do `rails-templates` — **não** é o que este compose executa.
+O primeiro motor local foi SQLite (default do `rails new`). Esta pasta agora sobe **Postgres no Docker**, alinhada ao Esboço A (relacional + JSON). Cloud SQL seria o Postgres _gerenciado no GCP_ do `rails-templates` — **não** é o que este compose executa.
 
 ## Como o ActiveRecord e o Postgres se encaixam
 
 Não basta um arquivo: o store é um conjunto.
 
-| Camada | O que esta PoC usa |
-|--------|-------------------|
-| `Gemfile` | `gem "pg"` (sem `sqlite3`) |
+| Camada                | O que esta PoC usa                              |
+| --------------------- | ----------------------------------------------- |
+| `Gemfile`             | `gem "pg"` (sem `sqlite3`)                      |
 | `config/database.yml` | adapter `postgresql`, só `development` / `test` |
-| `docker-compose.yml` | `postgres:16` na porta host **5433** |
-| Model | `Preference < ApplicationRecord` |
-| Schema | `db/migrate` + `bin/rails db:prepare` |
+| `docker-compose.yml`  | `postgres:16` na porta host **5433**            |
+| Model                 | `Preference < ApplicationRecord`                |
+| Schema                | `db/migrate` + `bin/rails db:prepare`           |
 
 Contraste com a irmã Mongo: lá Mongoid, `mongoid.yml` e `db:create_indexes`; **aqui** ActiveRecord, migration e `db:prepare`.
 
@@ -24,15 +24,15 @@ Contraste com a irmã Mongo: lá Mongoid, `mongoid.yml` e `db:create_indexes`; *
 
 ## Decisões deste incremento
 
-| Decisão | Escolha | Por quê |
-|---------|---------|---------|
-| ORM | **ActiveRecord** (nativo do template) | Esboço A: identidade em colunas + `payload` JSON |
-| Motor local | **Postgres 16 no Docker** (porta 5433) | Alinha o estudo ao relacional; 5433 evita colidir com outros Postgres da máquina |
-| Cloud SQL | **Fora desta pasta** | Produto GCP do template; este repo não provisiona instância gerenciada |
-| `payload` | coluna **jsonb** | Tipo JSON do Postgres; `t.json` no SQLite antigo não era JSONB |
-| Context vazio | Sentinel `""` (não `NULL`) | `context` é opcional no contrato mas entra na identidade; em SQL `NULL != NULL` furaria o unique |
-| Unique singleton | índice unique parcial `WHERE cardinality = 'singleton'` | No máximo 1 singleton por identidade |
-| `scope: system` | rejeitado no model | Padrão calculado mora na Apresentação, não neste store |
+| Decisão          | Escolha                                                 | Por quê                                                                                                                                            |
+| ---------------- | ------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ORM              | **ActiveRecord** (nativo do template)                   | Esboço A: identidade em colunas + `payload` JSON                                                                                                   |
+| Motor local      | **Postgres 16 no Docker** (porta 5433)                  | Alinha o estudo ao relacional; 5433 evita colidir com outros Postgres da máquina                                                                   |
+| Cloud SQL        | **Fora desta pasta**                                    | Produto GCP do template; este repo não provisiona instância gerenciada                                                                             |
+| `payload`        | coluna **jsonb**                                        | Tipo JSON do Postgres                                                                                                                              |
+| Context ausente  | `NULL` (sem sentinel)                                   | `context` é opcional; o PUT acha o singleton por identidade (`find_by`, `IS NULL` no ausente). Unicidade no model (`singleton_identity_unique`).   |
+| Unique singleton | índice unique parcial `WHERE cardinality = 'singleton'` | Ajuda quando o context vem preenchido. Dois `NULL` no unique padrão do Postgres **não** colidem — nesta PoC a trava do caso sem context é o model. |
+| `scope: system`  | rejeitado no model                                      | Padrão calculado mora na Apresentação, não neste store                                                                                             |
 
 ## Subir local
 
@@ -41,17 +41,9 @@ Pré-requisitos: Docker, Ruby alinhado a `.ruby-version`, Bundler, cliente `libp
 ```bash
 cd ~/Developer/rd-station/preferences-api
 docker compose up -d
-bundle config set --local path 'vendor/bundle'
-bundle install
+bundle
 bin/rails db:prepare db:seed
 bin/rails server -p 3001
-```
-
-Em outro terminal (smoke de leitura):
-
-```bash
-bin/demo
-# ou: BASE_URL=http://localhost:3001 bin/demo
 ```
 
 - Host/porta default: `127.0.0.1:5433`
@@ -82,8 +74,6 @@ curl 'http://localhost:3001/v1/preferences/resolved?resource_origin=platform_obj
 
 ## Ver o dado
 
-Não há arquivo SQLite nesta PoC. Duas formas:
-
 **Rails console**
 
 ```bash
@@ -113,14 +103,14 @@ Mesmos da PoC Mongo (`preferences-api-mongo`). Header obrigatório: `Platform-Ac
 
 GETs exigem query de identidade (`resource_origin`, `resource_key`, `surface`, `type`); não há dump “tudo da conta”.
 
-| Método | Caminho | Uso |
-|--------|---------|-----|
-| `GET` | `/health_check` | health + `store: postgres` |
-| `GET` | `/v1/preferences/raw` | camadas singleton gravadas |
-| `GET` | `/v1/preferences/resolved` | resolve com `base` na query |
-| `PUT` / `DELETE` | `/v1/preferences/singleton` | upsert / apaga singleton |
-| `GET` / `POST` | `/v1/preferences` | lista / cria multi |
-| `DELETE` | `/v1/preferences/:id` | apaga multi por `uuid` |
+| Método           | Caminho                     | Uso                         |
+| ---------------- | --------------------------- | --------------------------- |
+| `GET`            | `/health_check`             | health + `store: postgres`  |
+| `GET`            | `/v1/preferences/raw`       | camadas singleton gravadas  |
+| `GET`            | `/v1/preferences/resolved`  | resolve com `base` na query |
+| `PUT` / `DELETE` | `/v1/preferences/singleton` | upsert / apaga singleton    |
+| `GET` / `POST`   | `/v1/preferences`           | lista / cria multi          |
+| `DELETE`         | `/v1/preferences/:id`       | apaga multi por `uuid`      |
 
 `GET /raw` = singletons crus daquela superfície. `GET /resolved` = cascata com **base simulando system** (query `base_fields` ou fallback `titulo, valor, etapa` — **não** grava `scope: system`).
 

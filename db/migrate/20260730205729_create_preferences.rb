@@ -9,12 +9,11 @@ class CreatePreferences < ActiveRecord::Migration[8.0]
       t.string :resource_key, null: false
       t.string :surface, null: false
       t.string :preference_type, null: false
-      # Sentinel "" em vez de NULL: os dois entram no unique parcial de identidade e,
-      # em SQL, NULL != NULL — colunas anuláveis aqui fariam o índice deixar passar
-      # dois singleton com a mesma identidade e contexto ausente (o caso mais comum,
-      # já que `context` só é preenchido em superfície embutida).
-      t.string :context_host, null: false, default: ""
-      t.string :context_association, null: false, default: ""
+      # context é opcional no contrato (só superfície embutida). Ausente = NULL.
+      # Unicidade do singleton sem context fica no model (`singleton_identity_unique`):
+      # o unique parcial abaixo não trata dois NULL como iguais.
+      t.string :context_host
+      t.string :context_association
       t.string :scope, null: false
       t.string :scope_ref, null: false
       t.string :cardinality, null: false, default: "singleton"

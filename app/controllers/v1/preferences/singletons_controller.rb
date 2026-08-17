@@ -37,8 +37,8 @@ module V1
           resource_key: params.require(:resource).require(:key),
           surface: params.require(:surface),
           preference_type: params.require(:type),
-          context_host: params.dig(:context, :host).presence || Preference::CONTEXT_SENTINEL,
-          context_association: params.dig(:context, :association).presence || Preference::CONTEXT_SENTINEL,
+          context_host: params.dig(:context, :host).presence,
+          context_association: params.dig(:context, :association).presence,
           scope: params.require(:scope),
           scope_ref: params.require(:scope_ref).to_s
         }

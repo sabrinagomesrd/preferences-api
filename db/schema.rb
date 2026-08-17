@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_07_30_205729) do
+ActiveRecord::Schema[8.0].define(version: 2026_08_17_214000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -21,8 +21,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_30_205729) do
     t.string "resource_key", null: false
     t.string "surface", null: false
     t.string "preference_type", null: false
-    t.string "context_host", default: "", null: false
-    t.string "context_association", default: "", null: false
+    t.string "context_host"
+    t.string "context_association"
     t.string "scope", null: false
     t.string "scope_ref", null: false
     t.string "cardinality", default: "singleton", null: false

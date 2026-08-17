@@ -20,11 +20,6 @@ class Preference < ApplicationRecord
     config_formulario
     listagem
   ].freeze
-  # `context` é condicional no contrato (só em superfície embutida). Como ele entra no
-  # unique parcial de identidade, o "ausente" precisa de um valor único e comparável —
-  # com NULL o índice não fecharia a garantia de um singleton por identidade.
-  CONTEXT_SENTINEL = ""
-
   validates :uuid, presence: true, uniqueness: true
   validates :platform_account_id, presence: true, numericality: { only_integer: true, greater_than: 0 }
   validates :resource_origin, inclusion: { in: RESOURCE_ORIGINS }
@@ -37,7 +32,7 @@ class Preference < ApplicationRecord
   validate :singleton_identity_unique, if: -> { cardinality == "singleton" }
 
   before_validation :ensure_uuid
-  before_validation :normalize_context_sentinels
+  before_validation :normalize_blank_context
 
   scope :for_account, ->(platform_account_id) { where(platform_account_id: platform_account_id) }
   scope :singletons, -> { where(cardinality: "singleton") }
@@ -85,9 +80,9 @@ class Preference < ApplicationRecord
     self.uuid ||= SecureRandom.uuid
   end
 
-  def normalize_context_sentinels
-    self.context_host = CONTEXT_SENTINEL if context_host.nil?
-    self.context_association = CONTEXT_SENTINEL if context_association.nil?
+  def normalize_blank_context
+    self.context_host = context_host.presence
+    self.context_association = context_association.presence
   end
 
   def context_payload
